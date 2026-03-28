@@ -1,11 +1,10 @@
 {
   "name": "video-converter",
   "version": "1.0.0",
-  "description": "Production-ready video format converter with FFmpeg",
+  "description": "Video converter",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -13,9 +12,5 @@
     "fluent-ffmpeg": "^2.1.2",
     "multer": "^1.4.5-lts.1",
     "uuid": "^9.0.0"
-  },
-  "engines": {
-    "node": ">=14.0.0"
   }
 }
-
