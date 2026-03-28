@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Convertly — Video Format Converter</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sora', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            surface: {
+              50: '#f8f8f8',
+              100: '#f0f0f0',
+              800: '#141414',
+              850: '#111111',
+              900: '#0c0c0c',
+              950: '#080808',
+            },
+            accent: {
+              DEFAULT: '#6366f1',
+              hover: '#818cf8',
+              muted: '#312e81',
+            },
+          },
+          boxShadow: {
+            'glow': '0 0 40px rgba(99,102,241,0.15)',
+            'glow-sm': '0 0 20px rgba(99,102,241,0.1)',
+            'card': '0 1px 3px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.3)',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.5s ease forwards',
+            'shimmer': 'shimmer 2s linear infinite',
+            'pulse-slow': 'pulse 3s ease-in-out infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(16px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body class="bg-surface-950 text-white font-sans min-h-screen antialiased">
+
+  <!-- ═══ Noise Texture Overlay ═══ -->
+  <div class="noise-overlay" aria-hidden="true"></div>
+
+  <!-- ═══ Navbar ═══ -->
+  <header class="sticky top-0 z-50 nav-glass border-b border-white/5">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-glow-sm">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z" />
+          </svg>
+        </div>
+        <span class="font-semibold text-[15px] tracking-tight">Convertly</span>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <span class="hidden sm:flex items-center gap-1.5 text-xs text-white/40 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow"></span>
+          Server online
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══ Hero ═══ -->
+  <section class="pt-16 pb-8 px-4 sm:px-6 text-center" style="animation: fadeUp 0.6s ease forwards;">
+    <div class="max-w-2xl mx-auto">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs text-white/50 mb-6 font-mono">
+        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+        FFmpeg-powered · No file size tricks · Real conversion
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4 leading-tight">
+        Convert any video
+        <span class="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-violet-400 to-indigo-300">
+          in seconds.
+        </span>
+      </h1>
+      <p class="text-white/40 text-base sm:text-lg leading-relaxed max-w-lg mx-auto">
+        Upload your video, choose a format and resolution — get a clean, playable file back. No registration. No watermarks.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══ Main Container ═══ -->
+  <main class="max-w-2xl mx-auto px-4 sm:px-6 pb-24 space-y-4">
+
+    <!-- ── Step 1: Upload ── -->
+    <div class="card animate-fade-up" style="animation-delay:0.1s">
+      <div class="card-header">
+        <span class="step-badge">01</span>
+        <h2 class="card-title">Upload Video</h2>
+      </div>
+
+      <!-- Drop Zone -->
+      <div id="dropZone" class="drop-zone group" role="button" aria-label="Upload video file" tabindex="0">
+        <input type="file" id="fileInput" accept=".mp4,.mov,.avi,.mkv,.webm,video/*" class="hidden" />
+
+        <div id="dropContent" class="flex flex-col items-center gap-3 py-2">
+          <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-indigo-500/40 transition-all duration-300">
+            <svg class="w-6 h-6 text-white/30 group-hover:text-indigo-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-white/70">Drop video here or <span class="text-indigo-400">browse files</span></p>
+            <p class="text-xs text-white/30 mt-1">MP4, MOV, AVI, MKV, WebM · Up to 500MB</p>
+          </div>
+        </div>
+
+        <!-- File selected state (hidden initially) -->
+        <div id="fileInfo" class="hidden flex items-center gap-3 py-1 w-full">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0 text-left">
+            <p id="fileName" class="text-sm font-medium text-white truncate"></p>
+            <p id="fileSize" class="text-xs text-white/40 mt-0.5"></p>
+          </div>
+          <button id="clearFile" class="text-white/30 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-400/10" aria-label="Remove file">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step 2: Options ── -->
+    <div class="card animate-fade-up" style="animation-delay:0.2s">
+      <div class="card-header">
+        <span class="step-badge">02</span>
+        <h2 class="card-title">Output Options</h2>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Format -->
+        <div>
+          <label class="label">Output Format</label>
+          <div class="grid grid-cols-3 gap-2 mt-2">
+            <button class="format-btn active" data-format="mp4">
+              <span class="format-ext">MP4</span>
+              <span class="format-desc">H.264</span>
+            </button>
+            <button class="format-btn" data-format="webm">
+              <span class="format-ext">WebM</span>
+              <span class="format-desc">VP9</span>
+            </button>
+            <button class="format-btn" data-format="avi">
+              <span class="format-ext">AVI</span>
+              <span class="format-desc">XviD</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Resolution -->
+        <div>
+          <label class="label">Resolution</label>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <button class="res-btn active" data-res="original">
+              <span class="res-label">Original</span>
+            </button>
+            <button class="res-btn" data-res="1080p">
+              <span class="res-label">1080p</span>
+            </button>
+            <button class="res-btn" data-res="720p">
+              <span class="res-label">720p</span>
+            </button>
+            <button class="res-btn" data-res="480p">
+              <span class="res-label">480p</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Convert ── -->
+    <div class="animate-fade-up" style="animation-delay:0.3s">
+      <button id="convertBtn" class="convert-btn" disabled>
+        <svg id="convertIcon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        <span id="convertLabel">Select a video first</span>
+      </button>
+    </div>
+
+    <!-- ── Step 4: Progress ── -->
+    <div id="progressSection" class="card hidden animate-fade-up">
+      <div class="card-header">
+        <span class="step-badge">03</span>
+        <h2 class="card-title">Converting</h2>
+      </div>
+
+      <div class="space-y-3">
+        <div class="flex items-center justify-between text-sm">
+          <span id="progressLabel" class="text-white/50">Uploading…</span>
+          <span id="progressPct" class="font-mono text-indigo-400 text-sm font-medium">0%</span>
+        </div>
+
+        <!-- Progress Track -->
+        <div class="progress-track">
+          <div id="progressBar" class="progress-fill" style="width:0%"></div>
+        </div>
+
+        <p id="progressHint" class="text-xs text-white/30">This may take a moment depending on file size.</p>
+      </div>
+    </div>
+
+    <!-- ── Step 5: Download ── -->
+    <div id="downloadSection" class="card hidden animate-fade-up">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h2 class="font-semibold text-white">Conversion complete</h2>
+          <p class="text-xs text-white/40 mt-0.5">Your file is ready to download</p>
+        </div>
+      </div>
+
+      <a id="downloadBtn" href="#" download class="download-btn">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        <span id="downloadLabel">Download converted video</span>
+      </a>
+
+      <button id="convertAnother" class="mt-3 w-full py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-all duration-200">
+        Convert another video →
+      </button>
+    </div>
+
+    <!-- ── Error State ── -->
+    <div id="errorSection" class="hidden">
+      <div class="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 flex gap-3">
+        <svg class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+        </svg>
+        <div>
+          <p class="text-sm font-medium text-red-300">Conversion failed</p>
+          <p id="errorMsg" class="text-xs text-red-400/70 mt-1"></p>
+          <button id="retryBtn" class="mt-3 text-xs text-white/50 hover:text-white underline transition-colors">Try again</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="border-t border-white/5 py-8 px-4 text-center">
+    <p class="text-xs text-white/20 font-mono">
+      Powered by FFmpeg · Node.js · Express
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
