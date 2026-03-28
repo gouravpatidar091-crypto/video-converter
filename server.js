@@ -10,6 +10,20 @@ ffmpeg.setFfmpegPath("ffmpeg");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const express = require("express");
+const multer = require("multer");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
+const { v4: uuidv4 } = require("uuid");
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+console.log("FFmpeg path:", ffmpegInstaller.path);
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const UPLOADS_DIR = path.join(ROOT, "uploads");
 const OUTPUTS_DIR = path.join(ROOT, "outputs");
@@ -53,17 +67,27 @@ const RESOLUTIONS = {
 };
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({
+    status: "ok",
+    ffmpeg: ffmpegInstaller.path,
+    ffmpegVersion: ffmpegInstaller.version,
+  });
 });
 
 app.post("/api/convert", upload.single("video"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
 
   const format = req.body.format || "mp4";
   const resolution = req.body.resolution || "original";
   const jobId = uuidv4();
   const outputFilename = "converted_" + jobId + "." + format;
   const outputPath = path.join(OUTPUTS_DIR, outputFilename);
+
+  console.log("Job started:", jobId, format, resolution);
+  console.log("Input file:", req.file.path);
+  console.log("Output file:", outputPath);
 
   jobs.set(jobId, {
     status: "processing",
@@ -75,30 +99,42 @@ app.post("/api/convert", upload.single("video"), (req, res) => {
   const resConfig = RESOLUTIONS[resolution] || null;
 
   let cmd = ffmpeg(req.file.path)
+    .on("start", (cmdLine) => {
+      console.log("FFmpeg command:", cmdLine);
+    })
     .on("progress", (p) => {
       const job = jobs.get(jobId);
-      if (job) job.progress = Math.min(Math.round(p.percent || 0), 99);
+      if (job) {
+        job.progress = Math.min(Math.round(p.percent || 0), 99);
+        console.log("Progress:", job.progress + "%");
+      }
     })
     .on("end", () => {
+      console.log("Conversion done:", jobId);
       const job = jobs.get(jobId);
       if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size === 0) {
         job.status = "error";
-        job.error = "Output file empty";
+        job.error = "Output file is empty";
+        console.log("Error: output file empty");
         return;
       }
       job.status = "done";
       job.progress = 100;
-      try { fs.unlinkSync(req.file.path); } catch(e) {}
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
       setTimeout(() => {
-        try { fs.unlinkSync(outputPath); } catch(e) {}
+        try { fs.unlinkSync(outputPath); } catch (e) {}
         jobs.delete(jobId);
       }, 60 * 60 * 1000);
     })
-    .on("error", (err) => {
+    .on("error", (err, stdout, stderr) => {
+      console.log("FFmpeg error:", err.message);
+      console.log("stderr:", stderr);
       const job = jobs.get(jobId);
-      job.status = "error";
-      job.error = err.message;
-      try { fs.unlinkSync(req.file.path); } catch(e) {}
+      if (job) {
+        job.status = "error";
+        job.error = err.message;
+      }
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
     });
 
   if (format === "mp4") {
@@ -124,7 +160,11 @@ app.post("/api/convert", upload.single("video"), (req, res) => {
 app.get("/api/status/:jobId", (req, res) => {
   const job = jobs.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: "Job not found" });
-  const r = { status: job.status, progress: job.progress, error: job.error };
+  const r = {
+    status: job.status,
+    progress: job.progress,
+    error: job.error,
+  };
   if (job.status === "done") {
     r.downloadUrl = "/outputs/" + job.outputFile;
     r.filename = job.outputFile;
@@ -135,7 +175,9 @@ app.get("/api/status/:jobId", (req, res) => {
 app.get("/api/download/:filename", (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(OUTPUTS_DIR, filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "File not found" });
+  }
   res.download(filePath);
 });
 
@@ -144,9 +186,11 @@ app.get("*", (req, res) => {
 });
 
 app.use((err, req, res, next) => {
+  console.log("Express error:", err.message);
   res.status(400).json({ error: err.message });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log("Server running at http://localhost:" + PORT);
+  console.log("FFmpeg:", ffmpegInstaller.path);
 });
